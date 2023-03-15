@@ -1,0 +1,24 @@
+[tool.black]
+# https://github.com/psf/black
+line-length = 80
+target_version = ['py39']
+include = '\.pyi?$'
+exclude = '''
+(
+  /(
+    \.git
+    \.vscode
+    | htmlcov
+  )/
+)
+'''
+
+[tool.isort]
+# https://github.com/timothycrosley/isort
+# https://github.com/timothycrosley/isort/wiki/isort-Settings
+profile = "black"
+src_paths = ["src", "tests"]
+line_length = 80
+indent = '    '
+multi_line_output = 3
+include_trailing_comma = true
