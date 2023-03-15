@@ -8,7 +8,15 @@ from pathlib import Path
 import pytest
 from pandas import DataFrame
 
-from main import Buy, Sell, Transaction, get_buys, get_sells, read_gemini_input
+from main import (
+    Buy,
+    Sell,
+    Transaction,
+    change_strategy,
+    get_buys,
+    get_sells,
+    read_gemini_input,
+)
 
 TEST_INPUTS_PATH = Path("tests/input/")
 
@@ -116,3 +124,71 @@ def test_get_sells(gemini_input_df, gemini_sells):
 
     sells = get_sells(gemini_input_df)
     assert sells == gemini_sells
+
+
+def test_change_strat_first_in_first_out():
+    """Should sort the buys for a first-in-first-out strategy."""
+
+    buys = [
+        Buy(datetime(2020, 1, 2), 1, -1),
+        Buy(datetime(2020, 1, 1), 1, -1),
+        Buy(datetime(2020, 1, 3), 1, -1),
+    ]
+
+    change_strategy(buys, "first_in_first_out")
+    assert buys == [
+        Buy(datetime(2020, 1, 3), 1, -1),
+        Buy(datetime(2020, 1, 2), 1, -1),
+        Buy(datetime(2020, 1, 1), 1, -1),
+    ]
+
+
+def test_change_strat_last_in_first_out():
+    """Should sort the buys for a last-in-first-out strategy."""
+
+    buys = [
+        Buy(datetime(2020, 1, 2), 1, -1),
+        Buy(datetime(2020, 1, 1), 1, -1),
+        Buy(datetime(2020, 1, 3), 1, -1),
+    ]
+
+    change_strategy(buys, "last_in_first_out")
+    assert buys == [
+        Buy(datetime(2020, 1, 1), 1, -1),
+        Buy(datetime(2020, 1, 2), 1, -1),
+        Buy(datetime(2020, 1, 3), 1, -1),
+    ]
+
+
+def test_change_strat_most_expensive_first_out():
+    """Should sort the buys for a most-expensive-first-out strategy."""
+
+    buys = [
+        Buy(datetime(2020, 1, 2), 1, -10),
+        Buy(datetime(2020, 1, 1), 1, -1),
+        Buy(datetime(2020, 1, 3), 1, -100),
+    ]
+
+    change_strategy(buys, "most_expensive_first_out")
+    assert buys == [
+        Buy(datetime(2020, 1, 1), 1, -1),
+        Buy(datetime(2020, 1, 2), 1, -10),
+        Buy(datetime(2020, 1, 3), 1, -100),
+    ]
+
+
+def test_change_strat_least_expensive_first_out():
+    """Should sort the buys for a least-expensive-first-out strategy."""
+
+    buys = [
+        Buy(datetime(2020, 1, 2), 1, -10),
+        Buy(datetime(2020, 1, 1), 1, -1),
+        Buy(datetime(2020, 1, 3), 1, -100),
+    ]
+
+    change_strategy(buys, "least_expensive_first_out")
+    assert buys == [
+        Buy(datetime(2020, 1, 3), 1, -100),
+        Buy(datetime(2020, 1, 2), 1, -10),
+        Buy(datetime(2020, 1, 1), 1, -1),
+    ]

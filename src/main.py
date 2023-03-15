@@ -31,6 +31,11 @@ class Transaction:
         """Returns the transactions USD amount."""
         return self._usd
 
+    @property
+    def price(self) -> Decimal:
+        """Returns the BTCUSD price of the transaction."""
+        return abs(self.usd / self.btc)
+
     def __eq__(self, other: "Transaction"):
         if self is other:
             return True
@@ -109,3 +114,19 @@ def get_sells(input_df: DataFrame):
         for r in input_df.itertuples()
         if r.type == "Sell"
     ]
+
+
+def change_strategy(buys: list[Buy], strategy: str):
+    """Sorts the buy list according to the desired calculation strategy."""
+
+    if strategy == "first_in_first_out":
+        buys.sort(key=lambda b: b.timestamp, reverse=True)
+
+    elif strategy == "last_in_first_out":
+        buys.sort(key=lambda b: b.timestamp, reverse=False)
+
+    elif strategy == "most_expensive_first_out":
+        buys.sort(key=lambda b: b.price, reverse=False)
+
+    elif strategy == "least_expensive_first_out":
+        buys.sort(key=lambda b: b.price, reverse=True)
