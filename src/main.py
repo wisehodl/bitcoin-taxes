@@ -109,11 +109,12 @@ def get_buys(input_df: DataFrame):
 
 def get_sells(input_df: DataFrame):
     """Returns a list of sell transactions from the input dataframe."""
-    return [
+    sells = [
         Sell(r.timestamp, r.btc, r.usd)
         for r in input_df.itertuples()
         if r.type == "Sell"
     ]
+    return sorted(sells, key=lambda s: s.timestamp)
 
 
 def change_strategy(buys: list[Buy], strategy: str):
