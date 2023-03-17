@@ -6,7 +6,6 @@ from datetime import datetime
 from decimal import Decimal
 from enum import Enum
 from pathlib import Path
-from pprint import pprint
 
 import pandas
 from pandas import DataFrame
@@ -172,63 +171,58 @@ def read_gemini_input(path: Path) -> DataFrame:
     return dataframe
 
 
-def get_buys(input_df: DataFrame):
-    """Returns a list of buy transactions from the input dataframe."""
+def get_transactions(input_df: DataFrame):
+    """Returns a list of transactions from the input dataframe"""
+    tx_cls = {"Buy": Buy, "Sell": Sell}
     return [
-        Buy(r.timestamp, r.btc, r.usd)
-        for r in input_df.itertuples()
-        if r.type == "Buy"
+        tx_cls[r.type](r.timestamp, r.btc, r.usd) for r in input_df.itertuples()
     ]
 
 
-def get_sells(input_df: DataFrame):
-    """Returns a list of sell transactions from the input dataframe."""
-    sells = [
-        Sell(r.timestamp, r.btc, r.usd)
-        for r in input_df.itertuples()
-        if r.type == "Sell"
-    ]
-    return sorted(sells, key=lambda s: s.timestamp)
+def has_sell(transactions: list[Transaction]):
+    """Returns True if there is a Sell in the transaction list."""
+    return any(isinstance(t, Sell) for t in transactions)
 
 
-def change_strategy(buys: list[Buy], strategy: str):
-    """Sorts the buy list according to the desired calculation strategy."""
+def next_sell_index(transactions: list[Transaction]):
+    """Returns the index of the first Sell in the transaction list."""
 
-    if strategy == "first_in_first_out":
-        buys.sort(key=lambda b: b.timestamp, reverse=True)
+    for index, transaction in enumerate(transactions):
+        if isinstance(transaction, Sell):
+            return index
 
-    elif strategy == "last_in_first_out":
-        buys.sort(key=lambda b: b.timestamp, reverse=False)
-
-    elif strategy == "most_expensive_first_out":
-        buys.sort(key=lambda b: abs(b.price), reverse=False)
-
-    elif strategy == "least_expensive_first_out":
-        buys.sort(key=lambda b: abs(b.price), reverse=True)
-
-    else:
-        raise ValueError(f"Unknown strategy: '{strategy}'")
+    return None
 
 
-def pop_buys(buys: list[Buy], timestamp: datetime, btc: Decimal):
-    """Pops buys from the buy list up to the btc amount."""
+def extract_sell(transactions: list[Transaction], sell_index: int):
+    """Extracts the sell transaction and its matching buy transactions
+    according to a last-in-first-out strategy.
+    """
 
-    popped = []
+    assert isinstance(
+        transactions[sell_index], Sell
+    ), "Transaction at `sell_index` must be a Sell."
+
+    sell = transactions.pop(sell_index)
+    buy_index = sell_index - 1
+
+    buys = []
+    btc = -sell.btc
 
     while btc:
-        pbuy = buys.pop()
+        pbuy = transactions.pop(buy_index)
 
-        if btc >= pbuy.btc:
-            popped.append(pbuy)
+        if btc < pbuy.btc:
+            split, remainder = pbuy.split(btc)
+            buys.append(split)
+            transactions.insert(buy_index, remainder)
+            btc -= split.btc
+        else:
+            buys.append(pbuy)
+            buy_index -= 1
             btc -= pbuy.btc
 
-        elif btc < pbuy.btc:
-            split, remainder = pbuy.split(btc)
-            popped.append(split)
-            buys.append(remainder)
-            btc -= split.btc
-
-    return popped
+    return sell, buys
 
 
 def split_sell(sell: Sell, buys: list[Buy]):
@@ -245,25 +239,22 @@ def split_sell(sell: Sell, buys: list[Buy]):
     return sells
 
 
-def match_capital_gains(sells: list[Sell], buys: list[Buy]):
+def match_capital_gains(transactions: list[Transaction]):
     """Matches up sell transactions to buy transactions for capital gains."""
 
-    sell_vol = sum(s.btc for s in sells)
-    buy_vol = sum(b.btc for b in buys)
+    sell_vol = sum(s.btc for s in transactions if isinstance(s, Sell))
+    buy_vol = sum(b.btc for b in transactions if isinstance(b, Buy))
 
     assert sell_vol < buy_vol, "Cannot sell more BTC than what was bought."
 
     cap_gains = []
 
-    for sell in sells:
-        print(sell)
-        pbuys = pop_buys(buys, -sell.btc)
-        print(pbuys)
+    while has_sell(transactions):
+        sell_index = next_sell_index(transactions)
+        sell, buys = extract_sell(transactions, sell_index)
         cap_gains += [
-            CapitalGain(b, s) for b, s in zip(pbuys, split_sell(sell, pbuys))
+            CapitalGain(b, s) for b, s in zip(buys, split_sell(sell, buys))
         ]
-
-    pprint(buys)
 
     return cap_gains
 
@@ -346,12 +337,9 @@ if __name__ == "__main__":
     output_path = Path(args.output)
 
     gemini_input = read_gemini_input(input_path / "gemini.xlsx")
-    buys = get_buys(gemini_input)
-    sells = get_sells(gemini_input)
+    transactions = get_transactions(gemini_input)
 
-    change_strategy(buys, "last_in_first_out")
-
-    cap_gains = match_capital_gains(sells, buys)
+    cap_gains = match_capital_gains(transactions)
     short, long = tabulate(cap_gains)
 
     write_capital_gains(output_path, short, long)
