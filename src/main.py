@@ -171,6 +171,27 @@ def read_gemini_input(path: Path) -> DataFrame:
     return dataframe
 
 
+def read_swan_input(path: Path) -> DataFrame:
+    """Returns a transaction dataframe from a Swan transaction history."""
+
+    columns = {
+        "Date": "timestamp",
+        "Event": "type",
+        "Total USD": "usd",
+        "Unit Count": "btc",
+    }
+
+    dataframe = pandas.read_csv(path, usecols=columns.keys(), skiprows=2)
+    dataframe = dataframe.rename(columns=columns)
+    dataframe = dataframe.loc[dataframe["type"] == "purchase"]
+    dataframe["timestamp"] = pandas.to_datetime(dataframe["timestamp"])
+    dataframe["type"] = dataframe["type"].str.replace("purchase", "Buy")
+    dataframe["usd"] *= -1
+    dataframe = dataframe.sort_values(by=["timestamp"])
+
+    return dataframe
+
+
 def get_transactions(input_df: DataFrame):
     """Returns a list of transactions from the input dataframe"""
     tx_cls = {"Buy": Buy, "Sell": Sell}
@@ -337,9 +358,9 @@ if __name__ == "__main__":
     output_path = Path(args.output)
 
     gemini_input = read_gemini_input(input_path / "gemini.xlsx")
-    transactions = get_transactions(gemini_input)
+    transactions_ = get_transactions(gemini_input)
 
-    cap_gains = match_capital_gains(transactions)
-    short, long = tabulate(cap_gains)
+    cap_gains_ = match_capital_gains(transactions_)
+    short, long = tabulate(cap_gains_)
 
     write_capital_gains(output_path, short, long)

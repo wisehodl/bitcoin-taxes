@@ -2,7 +2,7 @@
 
 import csv
 import shutil
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 from pathlib import Path
 
@@ -21,6 +21,7 @@ from main import (
     match_capital_gains,
     next_sell_index,
     read_gemini_input,
+    read_swan_input,
     split_sell,
     tabulate,
     write_capital_gains,
@@ -89,6 +90,16 @@ def gemini_input_fixture(tmp_path: Path) -> Path:
     return tmp_path / filename
 
 
+@pytest.fixture(scope="function", name="swan_input")
+def swan_input_fixture(tmp_path: Path) -> Path:
+    """Provides a minimal swan transaction history file path."""
+
+    filename = "swan.csv"
+    shutil.copy2(TEST_INPUTS_PATH / filename, tmp_path)
+
+    return tmp_path / filename
+
+
 @pytest.fixture(name="gemini_input_df")
 def gemini_input_dataframe_fixture():
     """Returns a sample transaction input dataframe."""
@@ -105,6 +116,23 @@ def gemini_input_dataframe_fixture():
             "type": ["Buy", "Sell", "Buy", "Sell", "Sell"],
             "usd": [-5, 5, -10, 10, 15],
             "btc": [1, -1, 2, -2, -3],
+        }
+    )
+
+
+@pytest.fixture(name="swan_input_df")
+def swan_input_dataframe_fixture():
+    """Returns a sample transaction input dataframe."""
+
+    return DataFrame(
+        data={
+            "timestamp": [
+                datetime(2023, 6, 13, 15, 27, 27, tzinfo=timezone.utc),
+                datetime(2023, 11, 14, 13, 34, 17, tzinfo=timezone.utc),
+            ],
+            "type": ["Buy", "Buy"],
+            "usd": [-900.0, -500.0],
+            "btc": [0.0347969, 0.01362289],
         }
     )
 
@@ -127,6 +155,18 @@ def test_read_gemini_input(gemini_input, gemini_input_df):
 
     dataframe = read_gemini_input(gemini_input)
     expected = gemini_input_df
+
+    assert dataframe["timestamp"].tolist() == expected["timestamp"].tolist()
+    assert dataframe["type"].tolist() == expected["type"].tolist()
+    assert dataframe["usd"].tolist() == expected["usd"].tolist()
+    assert dataframe["btc"].tolist() == expected["btc"].tolist()
+
+
+def test_read_swan_input(swan_input, swan_input_df):
+    """Should read Swan transaction history into buys and sells."""
+
+    dataframe = read_swan_input(swan_input)
+    expected = swan_input_df
 
     assert dataframe["timestamp"].tolist() == expected["timestamp"].tolist()
     assert dataframe["type"].tolist() == expected["type"].tolist()
