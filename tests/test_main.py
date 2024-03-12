@@ -20,6 +20,7 @@ from main import (
     has_sell,
     match_capital_gains,
     next_sell_index,
+    read_cashapp_input,
     read_gemini_input,
     read_swan_input,
     split_sell,
@@ -100,6 +101,16 @@ def swan_input_fixture(tmp_path: Path) -> Path:
     return tmp_path / filename
 
 
+@pytest.fixture(scope="function", name="cashapp_input")
+def cashapp_input_fixture(tmp_path: Path) -> Path:
+    """Provides a minimal cashapp transaction history file path."""
+
+    filename = "cashapp.csv"
+    shutil.copy2(TEST_INPUTS_PATH / filename, tmp_path)
+
+    return tmp_path / filename
+
+
 @pytest.fixture(name="gemini_input_df")
 def gemini_input_dataframe_fixture():
     """Returns a sample transaction input dataframe."""
@@ -137,6 +148,25 @@ def swan_input_dataframe_fixture():
     )
 
 
+@pytest.fixture(name="cashapp_input_df")
+def cashapp_input_dataframe_fixture():
+    """Returns a sample transaction input dataframe."""
+
+    return DataFrame(
+        data={
+            "timestamp": [
+                datetime(2023, 10, 31, 18, 27, 3, tzinfo=timezone.utc),
+                datetime(2023, 11, 9, 22, 14, 26, tzinfo=timezone.utc),
+                datetime(2023, 12, 21, 22, 17, 14, tzinfo=timezone.utc),
+                datetime(2023, 12, 25, 14, 53, 19, tzinfo=timezone.utc),
+            ],
+            "type": ["Sell", "Buy", "Buy", "Sell"],
+            "usd": [24.99, -1967.95, -871.84, 5500],
+            "btc": [-0.00072675, 0.05365757, 0.01983945, -0.12656005],
+        }
+    )
+
+
 @pytest.fixture(name="gemini_transactions")
 def gemini_txs_fixture():
     """Returns the transactions from the gemini input."""
@@ -167,6 +197,18 @@ def test_read_swan_input(swan_input, swan_input_df):
 
     dataframe = read_swan_input(swan_input)
     expected = swan_input_df
+
+    assert dataframe["timestamp"].tolist() == expected["timestamp"].tolist()
+    assert dataframe["type"].tolist() == expected["type"].tolist()
+    assert dataframe["usd"].tolist() == expected["usd"].tolist()
+    assert dataframe["btc"].tolist() == expected["btc"].tolist()
+
+
+def test_read_cashapp_input(cashapp_input, cashapp_input_df):
+    """Should read Cash App transaction history into buys and sells."""
+
+    dataframe = read_cashapp_input(cashapp_input)
+    expected = cashapp_input_df
 
     assert dataframe["timestamp"].tolist() == expected["timestamp"].tolist()
     assert dataframe["type"].tolist() == expected["type"].tolist()

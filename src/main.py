@@ -192,6 +192,40 @@ def read_swan_input(path: Path) -> DataFrame:
     return dataframe
 
 
+def read_cashapp_input(path: Path) -> DataFrame:
+    """Returns a transaction dataframe from a Cash App transaction history."""
+
+    columns = {
+        "Date": "timestamp",
+        "Transaction Type": "type",
+        "Amount": "usd",
+        "Asset Amount": "btc",
+    }
+
+    dataframe = pandas.read_csv(path, usecols=columns.keys())
+    dataframe = dataframe.rename(columns=columns)
+
+    dataframe = dataframe.loc[
+        dataframe["type"].isin(("Bitcoin Buy", "Bitcoin Sale"))
+    ]
+    dataframe["timestamp"] = pandas.to_datetime(
+        dataframe["timestamp"]
+    ).dt.tz_convert("UTC")
+    dataframe["type"] = dataframe["type"].str.replace("Bitcoin Buy", "Buy")
+    dataframe["type"] = dataframe["type"].str.replace("Bitcoin Sale", "Sell")
+
+    dataframe["usd"] = (
+        dataframe["usd"]
+        .str.replace(r"\$", "")
+        .str.replace(",", "")
+        .astype(float)
+    )
+    dataframe.loc[dataframe["type"] == "Sell", "btc"] *= -1
+    dataframe = dataframe.sort_values(by=["timestamp"])
+
+    return dataframe
+
+
 def get_transactions(input_df: DataFrame):
     """Returns a list of transactions from the input dataframe"""
     tx_cls = {"Buy": Buy, "Sell": Sell}
