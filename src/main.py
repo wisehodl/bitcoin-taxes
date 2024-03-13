@@ -47,6 +47,11 @@ class Transaction:
         remainder_btc = self.btc - split_btc
         remainder_usd = self.usd - split_usd
 
+        if abs(remainder_usd) <= Decimal("0.0001"):
+            remainder_usd = Decimal("0")
+
+        # print(split_btc, split_usd, remainder_btc, remainder_usd)
+
         return type(self)(self.timestamp, split_btc, split_usd), type(self)(
             self.timestamp, remainder_btc, remainder_usd
         )
@@ -75,9 +80,13 @@ class Buy(Transaction):
 
     def __init__(self, timestamp, btc, usd):
         if btc < 0:
-            raise ValueError("BTC value must be positive for a buy.")
+            raise ValueError(
+                f"BTC value must be positive for a buy. Got: {timestamp}, {btc}"
+            )
         if usd > 0:
-            raise ValueError("USD value must be negative for a buy.")
+            raise ValueError(
+                f"USD value must be negative for a buy. Got: {timestamp} {usd}"
+            )
 
         super().__init__(timestamp, btc, usd)
 
@@ -87,9 +96,13 @@ class Sell(Transaction):
 
     def __init__(self, timestamp, btc, usd):
         if btc > 0:
-            raise ValueError("BTC value must be negative for a sell.")
+            raise ValueError(
+                f"BTC value must be negative for a sell. Got: {timestamp} {btc}"
+            )
         if usd < 0:
-            raise ValueError("USD value must be positive for a sell.")
+            raise ValueError(
+                f"USD value must be positive for a sell. Got: {timestamp} {usd}"
+            )
 
         super().__init__(timestamp, btc, usd)
 
@@ -166,6 +179,9 @@ def read_gemini_input(path: Path) -> DataFrame:
     dataframe = pandas.read_excel(path, usecols=columns.keys())
     dataframe = dataframe.rename(columns=columns)
     dataframe = dataframe.loc[dataframe["type"].isin(tx_types)]
+    dataframe["timestamp"] = pandas.to_datetime(
+        dataframe["timestamp"]
+    ).dt.tz_localize("UTC")
     dataframe = dataframe.sort_values(by=["timestamp"])
 
     return dataframe
@@ -392,7 +408,14 @@ if __name__ == "__main__":
     output_path = Path(args.output)
 
     gemini_input = read_gemini_input(input_path / "gemini.xlsx")
-    transactions_ = get_transactions(gemini_input)
+    swan_input = read_swan_input(input_path / "swan.csv")
+    cashapp_input = read_cashapp_input(input_path / "cashapp.csv")
+    transactions_ = (
+        get_transactions(gemini_input)
+        + get_transactions(swan_input)
+        + get_transactions(cashapp_input)
+    )
+    transactions_.sort(key=lambda tx: tx.timestamp)
 
     cap_gains_ = match_capital_gains(transactions_)
     short, long = tabulate(cap_gains_)

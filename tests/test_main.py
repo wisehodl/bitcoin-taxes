@@ -118,11 +118,11 @@ def gemini_input_dataframe_fixture():
     return DataFrame(
         data={
             "timestamp": [
-                datetime(2020, 6, 23, 20, 42, 26, 889000),
-                datetime(2020, 6, 23, 20, 45, 3, 979000),
-                datetime(2020, 6, 24, 16, 13, 54),
-                datetime(2020, 8, 17, 14, 13, 24, 948000),
-                datetime(2021, 6, 8, 15, 4, 56, 840000),
+                datetime(2020, 6, 23, 20, 42, 26, 889000, tzinfo=timezone.utc),
+                datetime(2020, 6, 23, 20, 45, 3, 979000, tzinfo=timezone.utc),
+                datetime(2020, 6, 24, 16, 13, 54, tzinfo=timezone.utc),
+                datetime(2020, 8, 17, 14, 13, 24, 948000, tzinfo=timezone.utc),
+                datetime(2021, 6, 8, 15, 4, 56, 840000, tzinfo=timezone.utc),
             ],
             "type": ["Buy", "Sell", "Buy", "Sell", "Sell"],
             "usd": [-5, 5, -10, 10, 15],
@@ -172,11 +172,23 @@ def gemini_txs_fixture():
     """Returns the transactions from the gemini input."""
 
     return [
-        Buy(datetime(2020, 6, 23, 20, 42, 26, 889000), 1, -5),
-        Sell(datetime(2020, 6, 23, 20, 45, 3, 979000), -1, 5),
-        Buy(datetime(2020, 6, 24, 16, 13, 54), 2, -10),
-        Sell(datetime(2020, 8, 17, 14, 13, 24, 948000), -2, 10),
-        Sell(datetime(2021, 6, 8, 15, 4, 56, 840000), -3, 15),
+        Buy(
+            datetime(2020, 6, 23, 20, 42, 26, 889000, tzinfo=timezone.utc),
+            1,
+            -5,
+        ),
+        Sell(
+            datetime(2020, 6, 23, 20, 45, 3, 979000, tzinfo=timezone.utc), -1, 5
+        ),
+        Buy(datetime(2020, 6, 24, 16, 13, 54, tzinfo=timezone.utc), 2, -10),
+        Sell(
+            datetime(2020, 8, 17, 14, 13, 24, 948000, tzinfo=timezone.utc),
+            -2,
+            10,
+        ),
+        Sell(
+            datetime(2021, 6, 8, 15, 4, 56, 840000, tzinfo=timezone.utc), -3, 15
+        ),
     ]
 
 
