@@ -51,8 +51,6 @@ class Transaction:
         if abs(remainder_usd) <= Decimal("0.0001"):
             remainder_usd = Decimal("0")
 
-        # print(split_btc, split_usd, remainder_btc, remainder_usd)
-
         return type(self)(self.timestamp, split_btc, split_usd), type(self)(
             self.timestamp, remainder_btc, remainder_usd
         )
