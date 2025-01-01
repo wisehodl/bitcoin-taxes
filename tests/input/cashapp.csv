@@ -1,0 +1,8 @@
+Transaction ID,Date,Transaction Type,Currency,Amount,Fee,Net Amount,Asset Type,Asset Price,Asset Amount,Status,Notes,Name of sender/receiver,Account
+abc,2023-12-25 09:53:19 EST,Bitcoin Sale,USD,"$5,500",-$41.61,"$5,458.39",BTC,"$43,457.63",0.12656005,COMPLETED,sale of BTC 0.12656005,,Your Cash
+def,2023-12-21 17:17:14 EST,Bitcoin Buy,USD,-$871.84,$0,-$871.84,BTC,"$43,944.77",0.01983945,COMPLETED,Paycheck: purchase of BTC 0.01983945,,Your Cash
+ghi,2023-12-11 20:26:26 EST,Bitcoin Withdrawal,USD,"-$1,000.20",$0,"-$1,000.20",BTC,"$41,641.49",0.02401942,COMPLETED,Withdrawing BTC 0.02401942 with fee BTC 0E-8.,,Your Cash
+jkl,2023-11-20 22:37:24 EST,Bitcoin Deposit,USD,$511.47,$0,$511.47,BTC,"$37,545.28",0.01362289,COMPLETED,Bitcoin Credit,,Your Cash
+mno,2023-11-09 17:14:26 EST,Bitcoin Buy,USD,"-$1,967.95",$0,"-$1,967.95",BTC,"$36,676.09",0.05365757,COMPLETED,Paycheck: purchase of BTC 0.05365757,,Your Cash
+pqr,2023-11-03 09:24:18 EDT,Bitcoin Lightning Deposit,USD,$99.95,$0,$99.95,BTC,"$34,352.58",0.00290955,COMPLETED,Lightning Deposit,,Your Cash
+stu,2023-10-31 14:27:03 EDT,Bitcoin Sale,USD,$24.99,-$0.56,$24.43,BTC,"$34,385.96",0.00072675,COMPLETED,sale of BTC 0.00072675,,Your Cash

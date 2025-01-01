@@ -1,0 +1,8 @@
+"Electric Solidus LLC (DBA Swan Bitcoin) 26565 W. Agoura Rd Suite 200 Calabasas, CA 91302",,,,,,,,,,,,,
+Phone: 12183797926,,,,,,,,,,,,,
+Event,Date,Timezone,Status,Transaction ID,Total USD,Transaction USD,Fee USD,Unit Count,Asset Type,BTC Price,Address Label,USD Cost Basis,Acquisition Date
+deposit,2023-06-01 05:07:51+00,UTC,settled,,4.46,,,,USD,,,,
+asset_deposit,2023-06-01 06:27:58+00,UTC,settled,,,,,0.02977475,BTC,,Custodial Transferred from Prime Trust #123,,
+deposit,2023-06-13 15:27:17+00,UTC,settled,,908.91,,8.91,,USD,,,,
+purchase,2023-06-13 15:27:27+00,UTC,settled,aaa,900,900,,0.0347969,BTC,25864.37,,,
+purchase,2023-11-14 13:34:17+00,UTC,settled,aaa,500,500,,0.01362289,BTC,36702.93,,,
