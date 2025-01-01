@@ -2,6 +2,8 @@
 
 import argparse
 import csv
+import os
+import warnings
 from datetime import datetime
 from decimal import Decimal
 from enum import Enum
@@ -113,6 +115,15 @@ class Duration(Enum):
     LONG = "Long"
 
 
+class Strategy(Enum):
+    """Cost basis matching strategy."""
+
+    FIFO = "FIFO"
+    LIFO = "LIFO"
+    HIFO = "HIFO"
+    LOFO = "LOFO"
+
+
 class CapitalGain:
     """A buy/sell transaction pair for capital gains calculation."""
 
@@ -164,7 +175,7 @@ class CapitalGain:
         return f"CapitalGain({self.buy}, {self.sell})"
 
 
-def read_gemini_input(path: Path) -> DataFrame:
+def transform_gemini_data(path: Path) -> DataFrame:
     """Returns a transaction dataframe from a Gemini transaction history."""
 
     columns = {
@@ -175,7 +186,10 @@ def read_gemini_input(path: Path) -> DataFrame:
     }
     tx_types = ("Buy", "Sell")
 
-    dataframe = pandas.read_excel(path, usecols=columns.keys())
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        dataframe = pandas.read_excel(path, usecols=columns.keys())
+
     dataframe = dataframe.rename(columns=columns)
     dataframe = dataframe.loc[dataframe["type"].isin(tx_types)]
     dataframe["timestamp"] = pandas.to_datetime(
@@ -186,7 +200,7 @@ def read_gemini_input(path: Path) -> DataFrame:
     return dataframe
 
 
-def read_swan_input(path: Path) -> DataFrame:
+def transform_swan_data(path: Path) -> DataFrame:
     """Returns a transaction dataframe from a Swan transaction history."""
 
     columns = {
@@ -207,7 +221,7 @@ def read_swan_input(path: Path) -> DataFrame:
     return dataframe
 
 
-def read_cashapp_input(path: Path) -> DataFrame:
+def transform_cashapp_data(path: Path) -> DataFrame:
     """Returns a transaction dataframe from a Cash App transaction history."""
 
     columns = {
@@ -240,6 +254,18 @@ def read_cashapp_input(path: Path) -> DataFrame:
     return dataframe
 
 
+def transform_river_data(path: Path):
+    """Returns a transaction dataframe from a River transaction history."""
+
+
+def transform_strike_data(path: Path):
+    """Returns a transaction dataframe from a Strike transaction history."""
+
+
+def transform_generic_data(path: Path):
+    """Returns a transaction dataframe from a generic transaction history."""
+
+
 def get_transactions(input_df: DataFrame):
     """Returns a list of transactions from the input dataframe"""
     tx_cls = {"Buy": Buy, "Sell": Sell}
@@ -263,9 +289,11 @@ def next_sell_index(transactions: list[Transaction]):
     return None
 
 
-def extract_sell(transactions: list[Transaction], sell_index: int):
+def extract_sell(
+    transactions: list[Transaction], sell_index: int, strategy: Strategy
+):
     """Extracts the sell transaction and its matching buy transactions
-    according to a last-in-first-out strategy.
+    according to the given strategy.
     """
 
     assert isinstance(
@@ -273,23 +301,24 @@ def extract_sell(transactions: list[Transaction], sell_index: int):
     ), "Transaction at `sell_index` must be a Sell."
 
     sell = transactions.pop(sell_index)
-    buy_index = sell_index - 1
-
     buys = []
-    btc = -sell.btc
 
-    while btc:
-        pbuy = transactions.pop(buy_index)
+    if strategy == Strategy.LIFO:
+        buy_index = sell_index - 1
+        btc = -sell.btc
 
-        if btc < pbuy.btc:
-            split, remainder = pbuy.split(btc)
-            buys.append(split)
-            transactions.insert(buy_index, remainder)
-            btc -= split.btc
-        else:
-            buys.append(pbuy)
-            buy_index -= 1
-            btc -= pbuy.btc
+        while btc:
+            pbuy = transactions.pop(buy_index)
+
+            if btc < pbuy.btc:
+                split, remainder = pbuy.split(btc)
+                buys.append(split)
+                transactions.insert(buy_index, remainder)
+                btc -= split.btc
+            else:
+                buys.append(pbuy)
+                buy_index -= 1
+                btc -= pbuy.btc
 
     return sell, buys
 
@@ -320,7 +349,7 @@ def match_capital_gains(transactions: list[Transaction]):
 
     while has_sell(transactions):
         sell_index = next_sell_index(transactions)
-        sell, buys = extract_sell(transactions, sell_index)
+        sell, buys = extract_sell(transactions, sell_index, Strategy.LIFO)
         cap_gains += [
             CapitalGain(b, s) for b, s in zip(buys, split_sell(sell, buys))
         ]
@@ -373,6 +402,8 @@ def write_capital_gains(
         "Gain or (loss)",
     ]
 
+    output.mkdir(exist_ok=True)
+
     for year, rows in short.items():
         file_path = output / f"{year}_short_gains.csv"
         with open(file_path, "w", encoding="utf-8") as file:
@@ -390,9 +421,41 @@ def write_capital_gains(
                 writer.writerow(row)
 
 
+def main(args):
+    """Runs the program."""
+
+    transformer = {
+        "gemini.xlsx": transform_gemini_data,
+        "swan.xlsx": transform_swan_data,
+        "cashapp.xlsx": transform_cashapp_data,
+        "generic.xlsx": transform_generic_data,
+        "river.xlsx": transform_river_data,
+        "strike.xlsx": transform_strike_data,
+    }
+
+    input_path = Path(args.input)
+    output_path = Path(args.output)
+
+    transactions_ = []
+
+    for file in os.listdir(input_path):
+        file_path = input_path / file
+
+        if file in transformer:
+            data = transformer[file](file_path)
+            transactions_ += get_transactions(data)
+
+    transactions_.sort(key=lambda tx: tx.timestamp)
+
+    cap_gains_ = match_capital_gains(transactions_)
+    short, long = tabulate(cap_gains_)
+
+    write_capital_gains(output_path, short, long)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        prog="bcg", description="Bitcoin Capital Gains Calculator"
+        prog="btax", description="Bitcoin Capital Gains Calculator"
     )
     parser.add_argument(
         "-i", "--input", required=True, help="Input file directory."
@@ -400,22 +463,5 @@ if __name__ == "__main__":
     parser.add_argument(
         "-o", "--output", required=True, help="Output file directory."
     )
-    args = parser.parse_args()
 
-    input_path = Path(args.input)
-    output_path = Path(args.output)
-
-    gemini_input = read_gemini_input(input_path / "gemini.xlsx")
-    swan_input = read_swan_input(input_path / "swan.csv")
-    cashapp_input = read_cashapp_input(input_path / "cashapp.csv")
-    transactions_ = (
-        get_transactions(gemini_input)
-        + get_transactions(swan_input)
-        + get_transactions(cashapp_input)
-    )
-    transactions_.sort(key=lambda tx: tx.timestamp)
-
-    cap_gains_ = match_capital_gains(transactions_)
-    short, long = tabulate(cap_gains_)
-
-    write_capital_gains(output_path, short, long)
+    main(parser.parse_args())
